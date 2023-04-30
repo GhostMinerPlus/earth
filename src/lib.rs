@@ -93,6 +93,8 @@ fn toml_insert_option(lc: &mut toml::Table, option: &str, args: &[String]) {
     };
 }
 
+pub use macros::*;
+
 #[cfg(test)]
 mod tests {
     use crate::Config;
@@ -103,7 +105,7 @@ mod tests {
         port: u16,
     }
 
-    impl Config for App{}
+    impl Config for App {}
 
     #[test]
     fn config() {
