@@ -1,4 +1,7 @@
 use std::fs;
+use toml::value::Array;
+
+pub use macros::*;
 
 pub trait AsConfig: serde::ser::Serialize + serde::de::DeserializeOwned {
     fn merge_by_toml(&mut self, toml: &toml::Table) {
@@ -36,64 +39,80 @@ fn right_merge_config(lc: &mut toml::Table, rc: &toml::Table) {
     }
 }
 
-fn properties2toml(args: &[String]) -> toml::Table {
+fn properties2toml(arg_v: &[String]) -> toml::Table {
     let mut table = toml::Table::default();
     let mut i = 0;
-    loop {
-        let word = &args[i];
+    while i < arg_v.len() {
+        let word = &arg_v[i];
         i += 1;
         if word.starts_with("--") {
             let option = &word[2..];
-            let start = i;
-            while i < args.len() && !args[i].starts_with("--") {
-                i += 1;
-            }
-            toml_insert_option(&mut table, option, &args[start..i]);
-        }
-        if i >= args.len() {
-            break;
+            toml_insert_option(&mut table, option, &arg_v[i]);
+            i += 1;
         }
     }
     table
 }
 
-fn toml_insert_option(lc: &mut toml::Table, option: &str, args: &[String]) {
+fn toml_insert_option(lc: &mut toml::Table, option: &str, value: &str) {
     match option.find('.') {
         Some(s) => {
             match lc.get_mut(&option[0..s].to_string()) {
                 Some(sc) => {
-                    toml_insert_option(&mut sc.as_table_mut().unwrap(), &option[s + 1..], args);
+                    toml_insert_option(&mut sc.as_table_mut().unwrap(), &option[s + 1..], value);
                 }
                 None => {
                     let mut sc = toml::Table::default();
-                    toml_insert_option(&mut sc, &option[s + 1..], args);
+                    toml_insert_option(&mut sc, &option[s + 1..], value);
                     lc.insert(option[0..s].to_string(), toml::Value::Table(sc));
                 }
             };
         }
         None => {
-            if args.is_empty() {
-                lc.insert(option.to_string(), toml::Value::Boolean(true));
+            if value.contains(',') {
+                let value_v: Vec<&str> = value.split(',').filter(|s| !s.is_empty()).collect();
+                if let None = lc.get(option) {
+                    lc.insert(option.to_string(), toml::Value::Array(Array::new()));
+                }
+                let arr = lc[option].as_array_mut().unwrap();
+                for value in value_v {
+                    if value.is_empty() {
+                        arr.push(toml::Value::Boolean(true));
+                    } else {
+                        arr.push(match value.find('.') {
+                            Some(_) => match value.parse::<f64>() {
+                                Ok(o) => toml::Value::Float(o),
+                                Err(_) => toml::Value::String(value.to_string()),
+                            },
+                            None => match value.parse::<i64>() {
+                                Ok(o) => toml::Value::Integer(o),
+                                Err(_) => toml::Value::String(value.to_string()),
+                            },
+                        });
+                    }
+                }
             } else {
-                lc.insert(
-                    option.to_string(),
-                    match args[0].find('.') {
-                        Some(_) => match args[0].parse::<f64>() {
-                            Ok(o) => toml::Value::Float(o),
-                            Err(_) => toml::Value::String(args[0].to_string()),
+                if value.is_empty() {
+                    lc.insert(option.to_string(), toml::Value::Boolean(true));
+                } else {
+                    lc.insert(
+                        option.to_string(),
+                        match value.find('.') {
+                            Some(_) => match value.parse::<f64>() {
+                                Ok(o) => toml::Value::Float(o),
+                                Err(_) => toml::Value::String(value.to_string()),
+                            },
+                            None => match value.parse::<i64>() {
+                                Ok(o) => toml::Value::Integer(o),
+                                Err(_) => toml::Value::String(value.to_string()),
+                            },
                         },
-                        None => match args[0].parse::<i64>() {
-                            Ok(o) => toml::Value::Integer(o),
-                            Err(_) => toml::Value::String(args[0].to_string()),
-                        },
-                    },
-                );
+                    );
+                }
             }
         }
     };
 }
-
-pub use macros::*;
 
 #[cfg(test)]
 mod tests {
