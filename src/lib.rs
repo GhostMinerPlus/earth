@@ -14,7 +14,7 @@ pub trait AsConfig: serde::ser::Serialize + serde::de::DeserializeOwned {
         }
     }
 
-    fn merge_by_args(&mut self, args: &std::vec::Vec<String>) {
+    fn merge_by_args(&mut self, args: &[String]) {
         self.merge_by_toml(&properties2toml(args))
     }
 }
@@ -36,7 +36,7 @@ fn right_merge_config(lc: &mut toml::Table, rc: &toml::Table) {
     }
 }
 
-fn properties2toml(args: &std::vec::Vec<String>) -> toml::Table {
+fn properties2toml(args: &[String]) -> toml::Table {
     let mut table = toml::Table::default();
     let mut i = 0;
     loop {
