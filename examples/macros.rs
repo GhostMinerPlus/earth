@@ -1,6 +1,6 @@
-use earth::Config;
+use earth::AsConfig;
 
-#[derive(serde::Serialize, serde::Deserialize, Config)]
+#[derive(serde::Serialize, serde::Deserialize, AsConfig)]
 struct App {
     name: String,
     port: u16,

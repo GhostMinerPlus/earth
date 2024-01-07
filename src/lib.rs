@@ -1,6 +1,6 @@
 use std::fs;
 
-pub trait Config: serde::ser::Serialize + serde::de::DeserializeOwned {
+pub trait AsConfig: serde::ser::Serialize + serde::de::DeserializeOwned {
     fn merge_by_toml(&mut self, toml: &toml::Table) {
         let mut temp: toml::Table = toml::from_str(&toml::to_string(self).unwrap()).unwrap();
         right_merge_config(&mut temp, toml);
@@ -97,7 +97,7 @@ pub use macros::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::Config;
+    use crate::AsConfig;
 
     #[derive(serde::Deserialize, serde::Serialize)]
     struct App {
@@ -105,16 +105,16 @@ mod tests {
         port: u16,
     }
 
-    impl Config for App {}
+    impl AsConfig for App {}
 
     #[test]
-    fn config() {
+    fn test_config() {
         let args = std::vec!["--port".to_string(), "8087".to_string()];
         let mut app = App {
             name: "".to_string(),
             port: 8080,
         };
-        app.merge_by_file("earth.toml");
+        app.merge_by_file("config.toml");
         app.merge_by_args(&args);
         assert!(app.port == 8087);
     }
