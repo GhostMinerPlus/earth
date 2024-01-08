@@ -14,6 +14,6 @@ fn main() {
         port: 8080,
     };
     config.merge_by_file("earth.toml");
-    config.merge_by_args(&arg_v);
+    config.merge_by_arg_v(&arg_v);
     println!("{:?}", config);
 }

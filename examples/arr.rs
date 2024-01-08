@@ -14,6 +14,6 @@ fn main() {
         port_v: vec![8080],
     };
     println!("{:?}", arg_v);
-    config.merge_by_args(&arg_v);
+    config.merge_by_arg_v(&arg_v);
     println!("{:?}", config);
 }
