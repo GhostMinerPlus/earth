@@ -64,14 +64,19 @@ fn set_option(config: &mut toml::Table, option: &str, value: &str) {
 }
 
 fn merge_toml(left: &mut toml::Table, right: &toml::Table) {
-    for (k, v) in left {
-        if !right.contains_key(k) {
-            continue;
-        }
+    for (k, v) in right {
         if v.is_table() {
-            merge_toml(v.as_table_mut().unwrap(), right[k].as_table().unwrap());
+            match left.get_mut(k) {
+                Some(sub_left) => {
+                    merge_toml(sub_left.as_table_mut().unwrap(), v.as_table().unwrap())
+                }
+                None => {
+                    left.insert(k.to_string(), v.clone());
+                    ()
+                }
+            }
         } else {
-            *v = right[k].clone();
+            left.insert(k.to_string(), v.clone());
         }
     }
 }
