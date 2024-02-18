@@ -46,10 +46,16 @@ fn parse_value(value: &str) -> toml::Value {
 
 fn set_option(config: &mut toml::Table, option: &str, value: &str) {
     match option.find('.') {
-        Some(pos) => {
-            let sc = &mut config[&option[0..pos]];
-            set_option(sc.as_table_mut().unwrap(), &option[pos + 1..], value);
-        }
+        Some(pos) => match config.get_mut(&option[0..pos]) {
+            Some(sc) => {
+                set_option(sc.as_table_mut().unwrap(), &option[pos + 1..], value);
+            }
+            None => {
+                let mut sc = toml::Table::new();
+                set_option(&mut sc, &option[pos + 1..], value);
+                config.insert(option[0..pos].to_string(), toml::Value::Table(sc));
+            }
+        },
         None => {
             let v = parse_value(value);
             config.insert(option.to_string(), v);
@@ -109,25 +115,39 @@ pub use macros::*;
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use crate::AsConfig;
 
     #[derive(serde::Deserialize, serde::Serialize)]
     struct App {
         name: String,
         port: u16,
+        moon_servers: Vec<String>,
+        proxy: BTreeMap<String, String>,
     }
 
     impl AsConfig for App {}
 
     #[test]
     fn test_config() {
-        let args = std::vec!["--port".to_string(), "8087".to_string()];
+        let args = std::vec![
+            "--port".to_string(),
+            "8087".to_string(),
+            "--moon_servers".to_string(),
+            "http://54.238.42.65:9007/moon,".to_string(),
+            "--proxy./sds/sds".to_string(),
+            "moon".to_string()
+        ];
         let mut app = App {
             name: "".to_string(),
             port: 8080,
+            moon_servers: Vec::new(),
+            proxy: BTreeMap::new(),
         };
         app.merge_by_file("config.toml");
         app.merge_by_arg_v(&args);
         assert!(app.port == 8087);
+        assert!(!app.moon_servers.is_empty());
     }
 }
